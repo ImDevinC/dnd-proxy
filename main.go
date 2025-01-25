@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -36,6 +37,22 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	destinationUrl := "https://character-service.dndbeyond.com/character/v5/character/" + character
-	w.Header().Add("Location", destinationUrl)
-	w.WriteHeader(http.StatusPermanentRedirect)
+	resp, err := http.DefaultClient.Get(destinationUrl)
+	if err != nil {
+		log.Println("[ERROR]", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Println("[ERROR]", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	_, err = w.Write(body)
+	if err != nil {
+		log.Println("[ERROR]", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 }
