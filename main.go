@@ -25,10 +25,17 @@ func main() {
 		port = defaultPort
 	}
 	log.Println("[INFO] listening on port ", port)
-	http.ListenAndServe(fmt.Sprintf(":%d", port), mux)
+	if err := http.ListenAndServe(fmt.Sprintf(":%d", port), mux); err != nil {
+		log.Println("[ERROR]", err)
+	}
+}
+
+func enableCors(w *http.ResponseWriter) {
+	(*w).Header().Set("Access-Control-Allow-Origin", "*")
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
 	character := r.URL.Query().Get("character")
 	if len(character) == 0 {
 		log.Println("[ERROR] invalid request")
