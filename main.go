@@ -13,7 +13,8 @@ const defaultPort = 8080
 
 func main() {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api", handler)
+	mux.HandleFunc("/api/character", charHandler)
+	mux.HandleFunc("/api/items", itemHandler)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		log.Println("[ERROR] invalid request")
 		log.Println(r.URL.String())
@@ -34,7 +35,7 @@ func enableCors(w *http.ResponseWriter) {
 	(*w).Header().Set("Access-Control-Allow-Origin", "*")
 }
 
-func handler(w http.ResponseWriter, r *http.Request) {
+func charHandler(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 	character := r.URL.Query().Get("character")
 	if len(character) == 0 {
@@ -44,22 +45,33 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	destinationUrl := "https://character-service.dndbeyond.com/character/v5/character/" + character
+	forwardRequest(&w, destinationUrl)
+}
+
+func itemHandler(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
+	destinationUrl := "https://character-service.dndbeyond.com/character/v5.1/game-data/items?" + r.URL.Query().Encode()
+	forwardRequest(&w, destinationUrl)
+}
+
+func forwardRequest(w *http.ResponseWriter, destinationUrl string) error {
 	resp, err := http.DefaultClient.Get(destinationUrl)
 	if err != nil {
 		log.Println("[ERROR]", err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		(*w).WriteHeader(http.StatusInternalServerError)
+		return err
 	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Println("[ERROR]", err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		(*w).WriteHeader(http.StatusInternalServerError)
+		return err
 	}
-	_, err = w.Write(body)
+	_, err = (*w).Write(body)
 	if err != nil {
 		log.Println("[ERROR]", err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		(*w).WriteHeader(http.StatusInternalServerError)
+		return err
 	}
+	return nil
 }
